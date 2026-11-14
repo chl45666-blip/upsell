@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#b3195f">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="업셀관리">
+<title>충남그룹 업셀 관리</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 상단 고정 탭바 + 한 열 작업 화면. 요약 → 할 일 → 상세표 순서 */
+:root{
+  --bg:#f5f6f9; --surface:#ffffff; --line:#e1e4ec; --fg:#1b1e2b; --muted:#646b80;
+  --accent:#b3195f; --accent-soft:#fbe8f0; --ink:#232a4a;
+  --ok:#1c7c4c; --ok-soft:#e2f4ea; --warn:#a35c00; --warn-soft:#fdf0dc;
+  --bad:#c1272d; --bad-soft:#fde5e5; --info:#2f5bb7; --info-soft:#e6edfb;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12141c; --surface:#1b1e29; --line:#2c3142; --fg:#e8eaf2; --muted:#9aa1b6;
+  --accent:#f0619e; --accent-soft:#3a1828; --ink:#c9d0ee;
+  --ok:#5fd396; --ok-soft:#163325; --warn:#f2b057; --warn-soft:#3a2a12;
+  --bad:#ff7b7f; --bad-soft:#3c1a1c; --info:#86a8ff; --info-soft:#1a2547; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12141c; --surface:#1b1e29; --line:#2c3142; --fg:#e8eaf2; --muted:#9aa1b6;
+  --accent:#f0619e; --accent-soft:#3a1828; --ink:#c9d0ee;
+  --ok:#5fd396; --ok-soft:#163325; --warn:#f2b057; --warn-soft:#3a2a12;
+  --bad:#ff7b7f; --bad-soft:#3c1a1c; --info:#86a8ff; --info-soft:#1a2547; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 6px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-size:18px;letter-spacing:-.01em;color:var(--ink)}
+.brand span{font-size:12px;color:var(--muted)}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav button{all:unset;cursor:pointer;padding:10px 12px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--accent);border-color:var(--accent)}
+nav button:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;text-align:center;line-height:18px}
+main{padding-block:20px 60px}
+section.view{display:flex;flex-direction:column;gap:18px}
+h2{font-size:20px;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-weight:600;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.kpi small{display:block;color:var(--muted);font-size:12px;letter-spacing:.02em}
+.kpi b{display:block;font-size:24px;font-variant-numeric:tabular-nums;margin-top:4px;color:var(--ink)}
+.kpi em{font-style:normal;font-size:12px;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel h3{margin:0 0 10px;font-size:15px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--bg);position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+tr.clk{cursor:pointer} tr.clk:hover td{background:var(--accent-soft)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+.p-plan{background:var(--info-soft);color:var(--info)}
+.p-soon{background:var(--warn-soft);color:var(--warn)}
+.p-today{background:var(--accent-soft);color:var(--accent)}
+.p-late{background:var(--bad-soft);color:var(--bad)}
+.p-done{background:var(--ok-soft);color:var(--ok)}
+.p-none{background:var(--bg);color:var(--muted)}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+input,select,textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);min-width:0;box-sizing:border-box}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
+@media (max-width:760px){.form{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media (max-width:460px){.form{grid-template-columns:minmax(0,1fr)}}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600}
+.form label.wide{grid-column:1/-1}
+.form .req::after{content:" *";color:var(--accent)}
+.fsec{font-size:13px;font-weight:700;color:var(--ink);grid-column:1/-1;padding-top:8px;border-top:1px dashed var(--line);margin-top:4px}
+.fsec:first-child{border:0;padding-top:0;margin-top:0}
+.calc{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:13px;grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap}
+.calc b{font-variant-numeric:tabular-nums;color:var(--accent)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex-direction:row;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;color:var(--fg);font-weight:500;cursor:pointer}
+.seg input{margin:0}
+.seg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.empty{padding:36px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--fg);font-size:15px;margin-bottom:6px}
+.banner{padding:10px 14px;border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner.demo{background:var(--warn-soft);color:var(--warn)}
+.banner.err{background:var(--bad-soft);color:var(--bad)}
+.banner.lock{background:var(--info-soft);color:var(--info)}
+.todo{display:flex;flex-direction:column}
+.todo div{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.todo div:last-child{border:0}
+.todo .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stages{display:flex;gap:4px}
+.st{width:26px;height:22px;border-radius:5px;display:grid;place-items:center;font-size:11px;font-weight:700;border:0;cursor:pointer;font-family:var(--sans)}
+dialog{border:0;border-radius:12px;padding:0;background:var(--surface);color:var(--fg);width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 40px)}
+dialog::backdrop{background:rgba(10,12,20,.5)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:20}
+.note{font-size:12px;color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--accent);opacity:.8}
+.sm-l{display:none}
+.cards{display:flex;flex-direction:column}
+.card{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card:last-child{border-bottom:0}
+.card .l1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card .l1 b{font-size:15px}
+.card .meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--muted)}
+.card.clk{cursor:pointer}
+.card.clk:active{background:var(--accent-soft)}
+.card .act{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.amt{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+@media (max-width:640px){
+  .lg-l{display:none}.sm-l{display:inline}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  nav button{flex:1;text-align:center;padding:13px 2px 12px;border-bottom:0;border-top:2px solid transparent;font-size:13px;position:relative}
+  nav button[aria-selected="true"]{border-top-color:var(--accent)}
+  nav .cnt{position:absolute;top:1px;left:calc(50% + 16px);margin:0;min-width:14px;line-height:15px;font-size:10px;padding:0 4px}
+  main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+  .top{padding-block:10px}
+  .brand span:not(.pill){display:none}
+  h2{font-size:18px}
+  .kpi{padding:12px}
+  .kpi b{font-size:19px}
+  .filters input{flex-basis:100%!important}
+  .filters select{flex:1 1 40%}
+  dialog{width:100vw;max-width:100vw;height:100%;max-height:100%;margin:0;border-radius:0}
+  .dlg{padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+  .st{width:38px;height:34px;font-size:14px}
+  .stages{gap:6px}
+  .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+  input,select,textarea{font-size:16px}
+  .btn{padding:10px 14px}
+  .btn.sm{padding:7px 12px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+[hidden]{display:none!important}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px)}
+.gate{min-height:80vh;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-left,0px))}
+.gate .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px 22px;max-width:380px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;text-align:center}
+.gate h1{margin:0;font-size:22px;color:var(--ink)}
+.gate p{margin:0;color:var(--muted);font-size:14px}
+.gate .btn{justify-content:center;padding:13px 16px;font-size:15px}
+.who-me{font-size:12px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+textarea.mail{font-family:var(--mono);font-size:13px;min-height:84px}
+@media (max-width:640px){.who-me{display:none}}
+</style>
+</head><body>
+<div class="gate" id="gate"><div class="box">
+  <h1>충남그룹 업셀 관리</h1>
+  <p id="gateMsg">맞춤제안팀 전용입니다.<br>등록된 구글 계정으로 로그인하세요.</p>
+  <button class="btn primary" id="btnLogin">구글 계정으로 로그인</button>
+  <button class="btn" id="btnLogout2" hidden>다른 계정으로 로그인</button>
+</div></div>
+<div id="app" hidden>
+
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><b>충남그룹 업셀 관리</b><span>맞춤제안팀</span><span class="pill p-plan" id="role" hidden></span></div>
+      <div class="row" style="gap:8px"><span class="who-me" id="meMail"></span><button class="btn sm" id="btnLogout">로그아웃</button><button class="btn primary" id="btnNew">+ 실적 입력</button></div>
+    </div>
+    <nav role="tablist" id="nav">
+      <button data-v="home" aria-selected="true">대시보드</button>
+      <button data-v="list"><span class="lg-l">고객·실적 목록</span><span class="sm-l">고객</span></button>
+      <button data-v="plan"><span class="lg-l">요금제 변경 체크</span><span class="sm-l">요금제</span><span class="cnt" id="cPlan" hidden></span></button>
+      <button data-v="pay"><span class="lg-l">대납 체크</span><span class="sm-l">대납</span><span class="cnt" id="cPay" hidden></span></button>
+      <button data-v="set">설정</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banners" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+
+  <!-- 대시보드 -->
+  <section class="view" id="v-home">
+    <div class="row between">
+      <div><h2>이번 달 업셀 현황</h2><p class="sub">업셀금액은 공급가(VAT 제외) 기준입니다.</p></div>
+      <div class="row" style="gap:6px">
+        <button class="btn sm" id="mPrev" aria-label="이전 달">‹</button>
+        <b id="mLabel" class="mono" style="font-size:14px;min-width:70px;text-align:center"></b>
+        <button class="btn sm" id="mNext" aria-label="다음 달">›</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="panel"><h3>오늘 챙길 일</h3><div id="todo"></div></div>
+      <div class="panel"><h3>담당자 순위</h3><div class="tbl" id="rank"></div></div>
+    </div>
+    <div class="panel"><h3>소속별 집계</h3><div class="tbl" id="byStore"></div></div>
+  </section>
+
+  <!-- 목록 -->
+  <section class="view" id="v-list" hidden>
+    <div class="row between">
+      <div><h2>고객·실적 목록</h2><p class="sub">행을 누르면 상세 보기와 수정이 열립니다.</p></div>
+      <button class="btn" id="btnCsv">엑셀(CSV) 내려받기</button>
+    </div>
+    <div class="filters">
+      <input id="fQ" placeholder="고객명·전화번호·가입번호 검색" style="flex:1 1 220px">
+      <select id="fMonth"></select>
+      <select id="fStaff"><option value="">담당자 전체</option></select>
+      <select id="fStore"><option value="">소속 전체</option></select>
+      <select id="fDae"><option value="">대납 전체</option><option value="y">대납 있음</option><option value="n">대납 없음</option></select>
+    </div>
+    <div class="panel" style="padding:0"><div class="tbl" id="listTbl"></div></div>
+  </section>
+
+  <!-- 요금제 변경 -->
+  <section class="view" id="v-plan" hidden>
+    <div><h2>요금제 변경 체크 (1~4차)</h2><p class="sub">업셀일 기준으로 차수별 변경일을 자동 계산합니다. 칸을 누르면 완료/취소됩니다.</p></div>
+    <div class="filters">
+      <input id="pQ" placeholder="고객명·담당자 검색" style="flex:1 1 200px">
+      <select id="pStat"><option value="">진행 중 전체</option><option value="late">지연</option><option value="today">당일</option><option value="soon">임박 (7일 이내)</option><option value="plan">예정</option><option value="done">모두 완료</option></select>
+    </div>
+    <div class="panel" style="padding:0"><div class="tbl" id="planTbl"></div></div>
+  </section>
+
+  <!-- 대납 -->
+  <section class="view" id="v-pay" hidden>
+    <div><h2>대납 체크</h2><p class="sub">94일치 대납을 월별로 나눠 일할 계산합니다. 각 회차 마감일은 해당 월 말일입니다.</p></div>
+    <div class="filters">
+      <input id="dQ" placeholder="고객명·담당자 검색" style="flex:1 1 200px">
+      <select id="dStat"><option value="">미완료 전체</option><option value="late">지연</option><option value="today">당일</option><option value="soon">임박 (7일 이내)</option><option value="plan">예정</option><option value="done">완료</option></select>
+    </div>
+    <div class="panel" style="padding:0"><div class="tbl" id="payTbl"></div></div>
+  </section>
+
+  <!-- 설정 -->
+  <section class="view" id="v-set" hidden>
+    <div><h2>설정</h2><p class="sub">요금제 변경 차수별 기준일(업셀일로부터 며칠 뒤)을 정합니다. 새로 입력하는 실적부터 적용됩니다.</p></div>
+    <div class="panel">
+      <div class="form" id="setForm">
+        <label>1차 (일)<input type="number" id="s1" min="1"></label>
+        <label>2차 (일)<input type="number" id="s2" min="1"></label>
+        <label>3차 (일)<input type="number" id="s3" min="1"></label>
+        <label>4차 (일)<input type="number" id="s4" min="1"></label>
+        <label>임박 알림 (마감 며칠 전)<input type="number" id="sSoon" min="1"></label>
+        <label>대납 기간 (일)<input type="number" id="sDays" min="1"></label>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="btnSet">설정 저장</button><span class="note" id="setNote"></span></div>
+    </div>
+    <div class="panel" id="memPanel">
+      <h3>팀원 등록</h3>
+      <p class="note" style="margin:0 0 12px">여기에 적힌 구글 계정만 로그인할 수 있어요. 한 줄에 하나씩 적어 주세요.</p>
+      <div class="form" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+        <label>관리자 (삭제·설정 가능)<textarea class="mail" id="mAdmins" placeholder="admin1@gmail.com"></textarea></label>
+        <label>맞춤제안팀 (입력·체크)<textarea class="mail" id="mStaff" placeholder="staff1@gmail.com"></textarea></label>
+      </div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="btnMem">팀원 저장</button><span class="note" id="memNote"></span></div>
+    </div>
+    <div class="panel note">
+      고객 개인정보가 들어 있는 화면입니다. 팀원이 퇴사·이동하면 위 목록에서 바로 지워 주세요. 공용 PC에서는 쓰고 나서 꼭 로그아웃하세요.
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+<div class="toast" id="toast" hidden></div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+
+<script>
+(function(){
+"use strict";
+// ---------- 유틸 ----------
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const won=n=>(Math.round(n||0)).toLocaleString("ko-KR")+"원";
+const p2=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+const parse=s=>{if(!s)return null;const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)};
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d)};
+const today=()=>ymd(new Date());
+const mq=matchMedia("(max-width:640px)"); const mob=()=>mq.matches;
+const diffDays=(a,b)=>Math.round((parse(a)-parse(b))/864e5);
+const supply=v=>Math.round((Number(v)||0)/1.1);
+const upAmt=r=>Math.max(0,supply(r.planAfter)-supply(r.planBefore));
+const fmtPhone=s=>{s=String(s||"").replace(/\D/g,"");return s.length===11?s.slice(0,3)+"-"+s.slice(3,7)+"-"+s.slice(7):s};
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2200)}
+
+// ---------- 상태 ----------
+let cfg={days:[94,124,154,184],soon:7,payDays:94};
+let rows=[]; let db=null, myId=null, myEmail="", members=null, unsubs=[];
+let loaded=false, demo=false, loadErr="", canWrite=true, isAdmin=false, setupNeeded=false;
+let month=today().slice(0,7);
+
+function stat(due,done){
+  if(done) return "done"; if(!due) return "none";
+  const d=diffDays(due,today());
+  if(d<0) return "late"; if(d===0) return "today"; if(d<=cfg.soon) return "soon"; return "plan";
+}
+const SL={late:"지연",today:"당일",soon:"임박",plan:"예정",done:"완료",none:"없음"};
+const pill=(s,extra)=>`<span class="pill p-${s}">${SL[s]}${extra?" "+extra:""}</span>`;
+const dLabel=due=>{const d=diffDays(due,today());return d===0?"D-day":d>0?"D-"+d:"D+"+(-d)};
+
+function buildStages(r,old){
+  const n=Number(r.stageCount??4); const out=[];
+  for(let i=0;i<4;i++){
+    if(i>=n){continue}
+    const o=(old||[])[i]||{};
+    out.push({n:i+1,due:o.dueManual?o.due:addDays(r.upsellDate,cfg.days[i]),dueManual:!!o.dueManual,plan:o.plan||"",done:!!o.done,doneAt:o.doneAt||""});
+  }
+  return out;
+}
+function buildPays(r,old){
+  if(r.daenap!=="y"||!r.upsellDate) return [];
+  const amt=upAmt(r); const start=r.upsellDate; const end=addDays(start,cfg.payDays-1);
+  const out=[]; let cur=start, i=0;
+  while(diffDays(end,cur)>=0){
+    const d=parse(cur); const mEnd=ymd(new Date(d.getFullYear(),d.getMonth()+1,0));
+    const segEnd=diffDays(mEnd,end)<0?mEnd:end;
+    const days=diffDays(segEnd,cur)+1; const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    const o=(old||[])[i]||{};
+    out.push({n:i+1,from:cur,to:segEnd,days,amount:Math.round(amt*days/dim),due:mEnd,done:!!o.done,doneAt:o.doneAt||""});
+    cur=addDays(segEnd,1); i++;
+  }
+  return out;
+}
+
+// ---------- 예시 데이터 (저장 안 됨) ----------
+function sampleRows(){
+  const t=today(); const mk=(k,staff,store,ago,b,a,dae)=>{const r={id:"ex"+k,staff,store,name:"예시고객"+k,joinNo:"5000000000"+k,billNo:"7700"+k+"1234",phone:"0100000000"+k,birth6:"900101",planBefore:b,planAfter:a,upsellDate:addDays(t,-ago),contract:"기가입",daenap:dae,stageCount:4,memo:"예시 데이터"};r.stages=buildStages(r);r.pays=buildPays(r);if(ago>100){r.stages[0].done=true}return r};
+  return [mk(1,"김예시","천안 A점",95,69000,95000,"y"),mk(2,"이예시","아산 B점",40,55000,85000,"y"),mk(3,"김예시","천안 A점",5,75000,105000,"n"),mk(4,"박예시","천안 C점",120,49000,75000,"y"),mk(5,"이예시","아산 B점",2,59000,89000,"n")];
+}
+function data(){return demo?sampleRows():rows}
+
+// ---------- 배너 ----------
+function banners(){
+  const b=[];
+  if(demo) b.push(`<div class="banner demo"><span><b>예시 화면</b>입니다. 실제로 저장되지 않아요.</span><button class="btn sm" id="exitDemo">예시 끄기</button></div>`);
+  if(loadErr) b.push(`<div class="banner err"><span>${esc(loadErr)}</span></div>`);
+  if(setupNeeded&&!demo) b.push(`<div class="banner lock"><span>처음 오셨네요. <b>설정</b> 탭에서 관리자와 맞춤제안팀 구글 계정을 등록해 주세요.</span></div>`);
+  $("#banners").innerHTML=b.join("");
+  const rl=$("#role"); rl.hidden=demo||!loaded||!db; rl.textContent=isAdmin?"관리자":"팀원";
+  const x=$("#exitDemo"); if(x) x.onclick=()=>{demo=false;renderAll()};
+}
+
+// ---------- 대시보드 ----------
+function renderHome(){
+  const [y,m]=month.split("-").map(Number); $("#mLabel").textContent=y+"."+p2(m);
+  const all=data(); const ms=all.filter(r=>(r.upsellDate||"").startsWith(month));
+  const sum=ms.reduce((a,r)=>a+upAmt(r),0);
+  const staffs=new Set(ms.map(r=>r.staff)); const dae=ms.filter(r=>r.daenap==="y").length;
+  $("#kpis").innerHTML=[
+    ["업셀 건수",ms.length+"건",""],["업셀금액 합계",won(sum),"공급가"],
+    ["건당 평균",ms.length?won(sum/ms.length):"—",""],["참여 담당자",staffs.size+"명","대납 "+dae+"건"]
+  ].map(k=>`<div class="kpi"><small>${k[0]}</small><b>${k[1]}</b><em>${k[2]||"&nbsp;"}</em></div>`).join("");
+
+  if(!all.length&&!loaded&&!demo){$("#todo").innerHTML=`<div class="empty">불러오는 중…</div>`}
+  else if(!all.length){
+    $("#todo").innerHTML=`<div class="empty"><b>아직 입력된 실적이 없어요</b>오른쪽 위 <b style="display:inline;color:var(--accent)">+ 실적 입력</b>을 눌러 첫 고객을 등록하세요.<div style="margin-top:12px"><button class="btn sm" id="goDemo">예시 데이터로 둘러보기</button></div></div>`;
+    $("#goDemo").onclick=()=>{demo=true;renderAll()};
+  } else {
+    const items=todoItems(all).filter(x=>x.s!=="plan").slice(0,10);
+    $("#todo").innerHTML=items.length?`<div class="todo">${items.map(x=>`<div>${pill(x.s)}<span class="who"><b>${esc(x.r.name)}</b> · ${esc(x.label)} <span class="note">${esc(x.r.staff)}</span></span><span class="mono">${x.due.slice(5)} ${dLabel(x.due)}</span></div>`).join("")}</div>`
+      :`<div class="empty">지연·당일·임박 건이 없어요.</div>`;
+  }
+  // 순위
+  const g=(key)=>{const m={};ms.forEach(r=>{const k=r[key]||"(미입력)";m[k]=m[k]||{n:0,s:0};m[k].n++;m[k].s+=upAmt(r)});return Object.entries(m).sort((a,b)=>b[1].n-a[1].n||b[1].s-a[1].s)};
+  const rk=g("staff"); const max=Math.max(1,...rk.map(x=>x[1].n));
+  $("#rank").innerHTML=rk.length?`<table><thead><tr><th>순위</th><th>담당자</th><th class="num">건수</th><th class="num">업셀금액</th><th style="width:30%"></th></tr></thead><tbody>${rk.map((x,i)=>`<tr><td>${i+1}</td><td><b>${esc(x[0])}</b></td><td class="num">${x[1].n}</td><td class="num">${won(x[1].s)}</td><td><div class="bar" style="width:${x[1].n/max*100}%"></div></td></tr>`).join("")}</tbody></table>`:`<div class="empty">이 달 실적이 없어요.</div>`;
+  const st=g("store");
+  $("#byStore").innerHTML=st.length?`<table><thead><tr><th>소속</th><th class="num">건수</th><th class="num">업셀금액</th><th class="num">건당 평균</th></tr></thead><tbody>${st.map(x=>`<tr><td><b>${esc(x[0])}</b></td><td class="num">${x[1].n}</td><td class="num">${won(x[1].s)}</td><td class="num">${won(x[1].s/x[1].n)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">이 달 실적이 없어요.</div>`;
+}
+function todoItems(all){
+  const out=[];
+  all.forEach(r=>{
+    (r.stages||[]).forEach(s=>{if(!s.done)out.push({r,s:stat(s.due,false),due:s.due,label:s.n+"차 요금제 변경"})});
+    (r.pays||[]).forEach(p=>{if(!p.done)out.push({r,s:stat(p.due,false),due:p.due,label:"대납 "+p.n+"회차 "+won(p.amount)})});
+  });
+  return out.sort((a,b)=>a.due<b.due?-1:1);
+}
+
+// ---------- 목록 ----------
+function fillSelect(id,vals,first){const el=$(id);const cur=el.value;el.innerHTML=`<option value="">${first}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join("");el.value=vals.includes(cur)?cur:""}
+function renderList(){
+  const all=data();
+  const months=[...new Set(all.map(r=>(r.upsellDate||"").slice(0,7)).filter(Boolean))].sort().reverse();
+  fillSelect("#fMonth",months,"업셀 월 전체");
+  fillSelect("#fStaff",[...new Set(all.map(r=>r.staff).filter(Boolean))].sort(),"담당자 전체");
+  fillSelect("#fStore",[...new Set(all.map(r=>r.store).filter(Boolean))].sort(),"소속 전체");
+  const q=$("#fQ").value.trim().replace(/-/g,""), fm=$("#fMonth").value, fs=$("#fStaff").value, fst=$("#fStore").value, fd=$("#fDae").value;
+  const list=all.filter(r=>(!q||[r.name,r.phone,r.joinNo,r.billNo].some(v=>String(v||"").replace(/-/g,"").includes(q)))&&(!fm||(r.upsellDate||"").startsWith(fm))&&(!fs||r.staff===fs)&&(!fst||r.store===fst)&&(!fd||r.daenap===fd)).sort((a,b)=>a.upsellDate<b.upsellDate?1:-1);
+  if(!list.length){$("#listTbl").innerHTML=`<div class="empty">${all.length?"조건에 맞는 고객이 없어요.":"<b>아직 등록된 고객이 없어요</b>+ 실적 입력으로 시작하세요."}</div>`;return}
+  if(mob()){$("#listTbl").innerHTML=`<div class="cards">${list.map(r=>{const st=r.stages||[];const dn=st.filter(s=>s.done).length;return `<div class="card clk" data-id="${esc(r.id)}"><div class="l1"><b>${esc(r.name)}</b><span class="amt">${won(upAmt(r))}</span></div><div class="meta"><span class="mono">${esc(r.upsellDate)}</span><span>${esc(r.staff)}</span><span class="mono">${esc(fmtPhone(r.phone))}</span></div><div class="meta"><span>${won(r.planBefore)} → ${won(r.planAfter)}</span><span>대납 ${r.daenap==="y"?"있음":"없음"}</span><span>${st.length?"변경 "+dn+"/"+st.length+"차":"변경 없음"}</span></div></div>`}).join("")}</div>`;$("#listTbl").querySelectorAll(".card").forEach(c=>c.onclick=()=>openForm(all.find(r=>r.id===c.dataset.id)));return}
+  $("#listTbl").innerHTML=`<table><thead><tr><th>업셀일</th><th>담당자</th><th>소속</th><th>고객명</th><th>전화번호</th><th>생년월일</th><th>가입번호</th><th>청구계정</th><th class="num">기존</th><th class="num">업셀</th><th class="num">업셀금액</th><th>대납</th><th>변경 진행</th></tr></thead><tbody>${list.map(r=>{
+    const st=r.stages||[]; const dn=st.filter(s=>s.done).length;
+    return `<tr class="clk" data-id="${esc(r.id)}"><td class="mono">${esc(r.upsellDate)}</td><td>${esc(r.staff)}</td><td>${esc(r.store)}</td><td><b>${esc(r.name)}</b></td><td class="mono">${esc(fmtPhone(r.phone))}</td><td class="mono">${esc(r.birth6)}</td><td class="mono">${esc(r.joinNo)}</td><td class="mono">${esc(r.billNo)}</td><td class="num">${won(r.planBefore)}</td><td class="num">${won(r.planAfter)}</td><td class="num"><b>${won(upAmt(r))}</b></td><td>${r.daenap==="y"?pill("plan","있음").replace("예정 ",""):'<span class="note">없음</span>'}</td><td>${st.length?dn+"/"+st.length+"차":'<span class="note">변경 없음</span>'}</td></tr>`}).join("")}</tbody></table>`;
+  $("#listTbl").querySelectorAll("tr.clk").forEach(tr=>tr.onclick=()=>openForm(all.find(r=>r.id===tr.dataset.id)));
+}
+
+// ---------- 요금제 변경 ----------
+function renderPlan(){
+  const all=data(); const q=$("#pQ").value.trim(), f=$("#pStat").value;
+  let list=all.filter(r=>(r.stages||[]).length).map(r=>{
+    const next=(r.stages||[]).find(s=>!s.done); const s=next?stat(next.due,false):"done"; return {r,next,s};
+  }).filter(x=>(!q||(x.r.name+x.r.staff).includes(q))&&(f?x.s===f:x.s!=="done"));
+  const order={late:0,today:1,soon:2,plan:3,done:4};
+  list.sort((a,b)=>order[a.s]-order[b.s]||((a.next?.due||"")<(b.next?.due||"")?-1:1));
+  const badge=all.filter(r=>(r.stages||[]).some(s=>!s.done&&["late","today","soon"].includes(stat(s.due,false)))).length;
+  const c=$("#cPlan"); c.hidden=!badge; c.textContent=badge;
+  if(!list.length){$("#planTbl").innerHTML=`<div class="empty">${all.length?"해당하는 건이 없어요.":"실적을 입력하면 차수별 변경일이 여기에 자동으로 잡혀요."}</div>`;return}
+  if(mob()){$("#planTbl").innerHTML=`<div class="cards">${list.map(({r,next,s})=>`<div class="card"><div class="l1"><span>${pill(s)} <b class="lnk" data-id="${esc(r.id)}" style="cursor:pointer;text-decoration:underline">${esc(r.name)}</b></span><span class="mono">${next?dLabel(next.due):"완료"}</span></div><div class="meta"><span>${esc(r.staff)}</span><span class="mono">${esc(fmtPhone(r.phone))}</span><span>${next?next.n+"차 "+next.due:"모든 차수 완료"}</span></div><div class="act"><div class="stages">${r.stages.map((st,i)=>{const ss=stat(st.due,st.done);return `<button class="st p-${ss}" data-id="${esc(r.id)}" data-i="${i}" title="${st.n}차 ${st.due} ${SL[ss]}">${st.done?"✓":st.n}</button>`}).join("")}</div><span class="note">${esc(curPlan(r))}</span></div></div>`).join("")}</div>`}
+  else $("#planTbl").innerHTML=`<table><thead><tr><th>상태</th><th>고객명</th><th>담당자</th><th>전화번호</th><th>업셀일</th><th>다음 변경</th><th>남은 날</th><th>1~4차 (눌러서 완료)</th><th>현재 요금제</th></tr></thead><tbody>${list.map(({r,next,s})=>`<tr><td>${pill(s)}</td><td><b class="lnk" data-id="${esc(r.id)}" style="cursor:pointer;text-decoration:underline">${esc(r.name)}</b></td><td>${esc(r.staff)}</td><td class="mono">${esc(fmtPhone(r.phone))}</td><td class="mono">${esc(r.upsellDate)}</td><td class="mono">${next?next.n+"차 "+next.due:"—"}</td><td class="mono">${next?dLabel(next.due):"—"}</td><td><div class="stages">${r.stages.map((st,i)=>{const ss=stat(st.due,st.done);return `<button class="st p-${ss}" data-id="${esc(r.id)}" data-i="${i}" title="${st.n}차 ${st.due} ${SL[ss]}">${st.done?"✓":st.n}</button>`}).join("")}</div></td><td>${esc(curPlan(r))}</td></tr>`).join("")}</tbody></table>`;
+  $("#planTbl").querySelectorAll(".st").forEach(b=>b.onclick=()=>toggleStage(b.dataset.id,+b.dataset.i));
+  $("#planTbl").querySelectorAll(".lnk").forEach(b=>b.onclick=()=>openForm(all.find(r=>r.id===b.dataset.id)));
+}
+function curPlan(r){const d=(r.stages||[]).filter(s=>s.done&&s.plan);return d.length?d[d.length-1].plan:won(r.planAfter)}
+
+// ---------- 대납 ----------
+function renderPay(){
+  const all=data(); const q=$("#dQ").value.trim(), f=$("#dStat").value;
+  let items=[]; all.forEach(r=>(r.pays||[]).forEach((p,i)=>items.push({r,p,i,s:stat(p.due,p.done)})));
+  const badge=items.filter(x=>["late","today","soon"].includes(x.s)).length;
+  const c=$("#cPay"); c.hidden=!badge; c.textContent=badge;
+  items=items.filter(x=>(!q||(x.r.name+x.r.staff).includes(q))&&(f?x.s===f:x.s!=="done"));
+  items.sort((a,b)=>a.p.due<b.p.due?-1:a.p.due>b.p.due?1:0);
+  if(!items.length){$("#payTbl").innerHTML=`<div class="empty">${all.some(r=>(r.pays||[]).length)?"해당하는 건이 없어요.":"대납 있음으로 입력한 실적이 여기에 회차별로 나타나요."}</div>`;return}
+  const tot=items.reduce((a,x)=>a+x.p.amount,0);
+  if(mob()){$("#payTbl").innerHTML=`<div class="cards">${items.map(x=>`<div class="card"><div class="l1"><span>${pill(x.s)} <b>${esc(x.r.name)}</b></span><span class="amt">${won(x.p.amount)}</span></div><div class="meta"><span>${x.p.n}/${x.r.pays.length}회</span><span class="mono">${x.p.from.slice(5)}~${x.p.to.slice(5)} (${x.p.days}일)</span><span>${esc(x.r.staff)}</span></div><div class="act"><span class="mono">마감 ${x.p.due} ${x.p.done?"":dLabel(x.p.due)}</span><button class="btn sm ${x.p.done?"":"primary"}" data-id="${esc(x.r.id)}" data-i="${x.i}">${x.p.done?"완료 취소":"완료"}</button></div></div>`).join("")}<div class="card"><div class="l1"><span class="note">합계</span><span class="amt">${won(tot)}</span></div></div></div>`}
+  else $("#payTbl").innerHTML=`<table><thead><tr><th>상태</th><th>마감일</th><th>고객명</th><th>담당자</th><th>가입번호</th><th>회차</th><th>대납 기간</th><th class="num">일수</th><th class="num">대납 금액</th><th>완료</th></tr></thead><tbody>${items.map(x=>`<tr><td>${pill(x.s)}</td><td class="mono">${x.p.due} ${x.p.done?"":dLabel(x.p.due)}</td><td><b>${esc(x.r.name)}</b></td><td>${esc(x.r.staff)}</td><td class="mono">${esc(x.r.joinNo)}</td><td>${x.p.n}/${x.r.pays.length}회</td><td class="mono">${x.p.from.slice(5)}~${x.p.to.slice(5)}</td><td class="num">${x.p.days}</td><td class="num"><b>${won(x.p.amount)}</b></td><td><button class="btn sm ${x.p.done?"":"primary"}" data-id="${esc(x.r.id)}" data-i="${x.i}">${x.p.done?"완료 취소":"완료"}</button></td></tr>`).join("")}<tr><td colspan="8" style="text-align:right;color:var(--muted)">합계</td><td class="num"><b>${won(tot)}</b></td><td></td></tr></tbody></table>`;
+  $("#payTbl").querySelectorAll("button[data-id]").forEach(b=>b.onclick=()=>togglePay(b.dataset.id,+b.dataset.i));
+}
+
+// ---------- 쓰기 ----------
+async function save(r){
+  if(demo){toast("예시 화면에서는 저장되지 않아요");return false}
+  if(!db){toast("저장 기능을 불러오지 못했어요. 새로고침해 주세요.");return false}
+  const {id,...body}=r;
+  try{
+    if(id){await db.collection("customers").doc(id).set(body)}
+    else{body.createdAt=new Date().toISOString();body.createdBy=myEmail||"";await db.collection("customers").add(body)}
+    return true;
+  }catch(e){
+    toast(e&&e.code==="quota_exceeded"?"저장 공간이 가득 찼어요. 오래된 건을 정리해 주세요.":"저장하지 못했어요. 편집 권한이 있는지 확인해 주세요.");return false;
+  }
+}
+async function toggleStage(id,i){
+  const r=data().find(x=>x.id===id); if(!r)return;
+  const c=structuredClone(r); const s=c.stages[i]; s.done=!s.done; s.doneAt=s.done?today():"";
+  if(demo){toast("예시 화면에서는 저장되지 않아요");return}
+  if(await save(c)) toast(s.n+"차 "+(s.done?"완료":"완료 취소"));
+}
+async function togglePay(id,i){
+  const r=data().find(x=>x.id===id); if(!r)return;
+  const c=structuredClone(r); const p=c.pays[i]; p.done=!p.done; p.doneAt=p.done?today():"";
+  if(demo){toast("예시 화면에서는 저장되지 않아요");return}
+  if(await save(c)) toast("대납 "+p.n+"회차 "+(p.done?"완료":"완료 취소"));
+}
+
+// ---------- 입력/수정 폼 ----------
+function openForm(r){
+  const isNew=!r; r=r||{staff:lsGet("up_staff")||"",store:lsGet("up_store")||"",upsellDate:today(),contract:"기가입",daenap:"n",stageCount:4};
+  const staffs=[...new Set(data().map(x=>x.staff).filter(Boolean))], stores=[...new Set(data().map(x=>x.store).filter(Boolean))];
+  const seg=(name,opts,val)=>`<div class="seg">${opts.map(o=>`<label><input type="radio" name="${name}" value="${o[0]}" ${String(val)===String(o[0])?"checked":""}>${o[1]}</label>`).join("")}</div>`;
+  const stg=(r.stages||[]);
+  $("#dlgBody").innerHTML=`
+  <div class="row between"><h2>${isNew?"실적 입력":"고객 상세 · 수정"}</h2><button class="btn sm" id="xClose">닫기</button></div>
+  <form class="form" id="frm" autocomplete="off">
+    <div class="fsec">담당 정보</div>
+    <label class="req">담당자명<input id="f_staff" list="dl_staff" required value="${esc(r.staff)}"></label>
+    <label>소속<input id="f_store" list="dl_store" value="${esc(r.store||"맞춤제안팀")}" placeholder="맞춤제안팀"></label>
+    <label class="req">업셀일<input id="f_date" type="date" required value="${esc(r.upsellDate)}"></label>
+    <datalist id="dl_staff">${staffs.map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <datalist id="dl_store">${stores.map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <div class="fsec">고객 정보</div>
+    <label class="req">고객 성함<input id="f_name" required value="${esc(r.name)}"></label>
+    <label>전화번호<input id="f_phone" inputmode="numeric" value="${esc(fmtPhone(r.phone))}" placeholder="010-0000-0000"></label>
+    <label>생년월일 (주민번호 앞 6자리)<input id="f_birth" inputmode="numeric" maxlength="6" value="${esc(r.birth6)}" placeholder="900101"></label>
+    <label>가입번호<input id="f_join" inputmode="numeric" value="${esc(r.joinNo)}"></label>
+    <label>청구계정번호<input id="f_bill" inputmode="numeric" value="${esc(r.billNo)}"></label>
+    <label>선택약정${seg("f_con",[["기가입","기가입"],["신규가입","신규"],["미가입","미가입"]],r.contract)}</label>
+    <div class="fsec">요금제 (VAT 포함 금액으로 입력)</div>
+    <label class="req">기존 요금제 (원)<input id="f_before" type="number" inputmode="numeric" required value="${esc(r.planBefore)}" placeholder="69000"></label>
+    <label class="req">업셀 요금제 (원)<input id="f_after" type="number" inputmode="numeric" required value="${esc(r.planAfter)}" placeholder="95000"></label>
+    <label>대납 여부${seg("f_dae",[["y","대납 있음"],["n","대납 없음"]],r.daenap)}</label>
+    <div class="calc" id="calc"></div>
+    <div class="fsec">요금제 변경 일정</div>
+    <label class="wide">변경 차수${seg("f_cnt",[[0,"변경 없음"],[1,"1차까지"],[2,"2차까지"],[3,"3차까지"],[4,"4차까지"]],r.stageCount??4)}</label>
+    <div class="wide tbl" id="stgBox"></div>
+    <label class="wide">메모<textarea id="f_memo" rows="2">${esc(r.memo)}</textarea></label>
+  </form>
+  <div class="row between">
+    <div>${isNew||!(isAdmin||demo)?"":`<button class="btn danger" id="xDel">삭제</button><span id="delAsk" hidden> <span class="note">정말 삭제할까요?</span> <button class="btn sm danger" id="xDelYes">삭제하기</button> <button class="btn sm" id="xDelNo">취소</button></span>`}</div>
+    <div class="row"><button class="btn" id="xCancel">취소</button><button class="btn primary" id="xSave" ${canWrite||demo?"":"disabled"}>${isNew?"저장":"수정 저장"}</button></div>
+  </div>`;
+  const dlg=$("#dlg");
+  const collect=()=>{
+    const v=id=>$(id).value.trim(); const rad=n=>(document.querySelector(`input[name="${n}"]:checked`)||{}).value;
+    return {id:r.id,staff:v("#f_staff"),store:v("#f_store"),upsellDate:v("#f_date"),name:v("#f_name"),phone:v("#f_phone").replace(/\D/g,""),birth6:v("#f_birth").replace(/\D/g,""),joinNo:v("#f_join").replace(/\D/g,""),billNo:v("#f_bill").replace(/\D/g,""),contract:rad("f_con")||"",planBefore:Number(v("#f_before"))||0,planAfter:Number(v("#f_after"))||0,daenap:rad("f_dae")||"n",stageCount:Number(rad("f_cnt")??4),memo:v("#f_memo"),createdAt:r.createdAt,createdBy:r.createdBy};
+  };
+  let stageEdits=structuredClone(stg);
+  const recalc=()=>{
+    const c=collect(); const a=upAmt(c);
+    const pays=buildPays(c,r.pays);
+    $("#calc").innerHTML=`<span>업셀금액(공급가) <b>${won(a)}</b></span><span>월 차액(VAT포함) ${won(c.planAfter-c.planBefore)}</span>${c.daenap==="y"?`<span>대납 ${pays.length}회 · 합계 <b>${won(pays.reduce((x,p)=>x+p.amount,0))}</b></span>`:""}`;
+    const st=c.upsellDate?buildStages(c,stageEdits):[];
+    $("#stgBox").innerHTML=st.length?`<table><thead><tr><th>차수</th><th>변경 예정일</th><th>변경할 요금제</th><th>상태</th></tr></thead><tbody>${st.map((s,i)=>`<tr><td><b>${s.n}차</b></td><td><input type="date" data-k="due" data-i="${i}" value="${s.due}"></td><td><input data-k="plan" data-i="${i}" value="${esc(s.plan)}" placeholder="예: 5G 스탠다드"></td><td>${pill(stat(s.due,s.done))}${s.doneAt?` <span class="note">${s.doneAt}</span>`:""}</td></tr>`).join("")}</tbody></table>`:`<div class="note">요금제 변경 일정 없음</div>`;
+    $("#stgBox").querySelectorAll("input").forEach(inp=>inp.onchange=()=>{const i=+inp.dataset.i;stageEdits[i]=Object.assign({},st[i],stageEdits[i]||{});if(inp.dataset.k==="due"){stageEdits[i].due=inp.value;stageEdits[i].dueManual=true}else stageEdits[i].plan=inp.value;recalc()});
+  };
+  $("#frm").addEventListener("input",e=>{if(!e.target.closest("#stgBox"))recalc()});
+  $("#frm").addEventListener("change",e=>{if(e.target.id==="f_date"){stageEdits=stageEdits.map(s=>s&&Object.assign({},s,{dueManual:false}))}if(!e.target.closest("#stgBox"))recalc()});
+  $("#frm").addEventListener("submit",e=>e.preventDefault());
+  recalc();
+  const close=()=>dlg.close();
+  $("#xClose").onclick=close; $("#xCancel").onclick=close;
+  $("#xSave").onclick=async()=>{
+    const c=collect();
+    const miss=[["담당자명",c.staff],["업셀일",c.upsellDate],["고객 성함",c.name],["기존 요금제",c.planBefore],["업셀 요금제",c.planAfter]].filter(x=>!x[1]).map(x=>x[0]);
+    if(miss.length){toast(miss.join(", ")+"을(를) 입력해 주세요");return}
+    if(c.birth6&&c.birth6.length!==6){toast("생년월일은 6자리 숫자로 입력해 주세요");return}
+    c.stages=buildStages(c,stageEdits); c.pays=buildPays(c,r.pays);
+    Object.keys(c).forEach(k=>c[k]===undefined&&delete c[k]);
+    lsSet("up_staff",c.staff); lsSet("up_store",c.store);
+    if(await save(c)){toast(isNew?"저장했어요":"수정했어요");close()}
+  };
+  if($("#xDel")){
+    $("#xDel").onclick=()=>{$("#delAsk").hidden=false;$("#xDel").hidden=true};
+    $("#xDelNo").onclick=()=>{$("#delAsk").hidden=true;$("#xDel").hidden=false};
+    $("#xDelYes").onclick=async()=>{
+      if(demo){toast("예시 화면에서는 삭제되지 않아요");return}
+      try{await db.collection("customers").doc(r.id).delete();toast("삭제했어요");close()}catch(e){toast("삭제하지 못했어요. 권한을 확인해 주세요.")}
+    };
+  }
+  dlg.showModal();
+}
+
+// ---------- CSV ----------
+$("#btnCsv").onclick=async()=>{
+  const all=data(); if(!all.length){toast("내려받을 데이터가 없어요");return}
+  const H=["업셀일","담당자","매장","고객명","전화번호","생년월일","가입번호","청구계정번호","선택약정","기존요금제","업셀요금제","업셀금액(공급가)","대납","1차","2차","3차","4차","메모"];
+  const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  const lines=[H.map(q).join(",")].concat(all.map(r=>{const s=i=>{const x=(r.stages||[])[i];return x?x.due+(x.done?" 완료":""):""};return [r.upsellDate,r.staff,r.store,r.name,fmtPhone(r.phone),r.birth6,"\t"+(r.joinNo||""),"\t"+(r.billNo||""),r.contract,r.planBefore,r.planAfter,upAmt(r),r.daenap==="y"?"있음":"없음",s(0),s(1),s(2),s(3),r.memo].map(q).join(",")}));
+  try{const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="업셀실적_"+today()+".csv";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}catch(e){toast("내려받지 못했어요")}
+};
+
+// ---------- 설정 ----------
+function renderSet(){
+  const lock=!isAdmin&&!demo; document.querySelectorAll("#setForm input").forEach(i=>i.disabled=lock); $("#btnSet").disabled=lock; $("#setNote").textContent=lock?"설정은 관리자만 바꿀 수 있어요.":"";
+  $("#memPanel").hidden=!isAdmin;
+  if(isAdmin&&document.activeElement.tagName!=="TEXTAREA"){$("#mAdmins").value=((members&&members.admins)||(setupNeeded?[myEmail]:[])).join("\n");$("#mStaff").value=((members&&members.staff)||[]).join("\n")}
+  cfg.days.forEach((d,i)=>$("#s"+(i+1)).value=d); $("#sSoon").value=cfg.soon; $("#sDays").value=cfg.payDays;
+}
+$("#btnSet").onclick=async()=>{
+  if(!isAdmin&&!demo){toast("설정은 관리자만 바꿀 수 있어요");return}
+  const n=id=>Math.max(1,parseInt($(id).value,10)||1);
+  const next={days:[n("#s1"),n("#s2"),n("#s3"),n("#s4")],soon:n("#sSoon"),payDays:n("#sDays")};
+  if(demo||!db){cfg=next;renderAll();toast("이 화면에만 적용했어요");return}
+  try{await db.doc("config/main").set(next);toast("설정을 저장했어요")}catch(e){toast("설정은 편집 권한이 있는 사람만 바꿀 수 있어요")}
+};
+
+// ---------- 탭 ----------
+const views=["home","list","plan","pay","set"];
+function show(v){
+  if(!views.includes(v))v="home";
+  views.forEach(x=>$("#v-"+x).hidden=x!==v);
+  document.querySelectorAll("#nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));
+}
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{show(b.dataset.v);try{history.replaceState(null,"","#"+b.dataset.v)}catch(e){location.hash=b.dataset.v}});
+mq.addEventListener("change",()=>renderAll());
+window.addEventListener("hashchange",()=>show(location.hash.slice(1)));
+$("#btnNew").onclick=()=>openForm(null);
+$("#mPrev").onclick=()=>{const[y,m]=month.split("-").map(Number);const d=new Date(y,m-2,1);month=ymd(d).slice(0,7);renderHome()};
+$("#mNext").onclick=()=>{const[y,m]=month.split("-").map(Number);const d=new Date(y,m,1);month=ymd(d).slice(0,7);renderHome()};
+["#fQ","#fMonth","#fStaff","#fStore","#fDae"].forEach(s=>$(s).addEventListener("input",renderList));
+["#pQ","#pStat"].forEach(s=>$(s).addEventListener("input",renderPlan));
+["#dQ","#dStat"].forEach(s=>$(s).addEventListener("input",renderPay));
+
+function renderAll(){banners();renderHome();renderList();renderPlan();renderPay();renderSet()}
+show(location.hash.slice(1)); renderAll();
+
+// ---------- 팀원 저장 ----------
+const mails=t=>[...new Set(t.split(/[\s,;]+/).map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)))];
+$("#btnMem").onclick=async()=>{
+  if(!isAdmin||!db)return;
+  const admins=mails($("#mAdmins").value), staff=mails($("#mStaff").value).filter(x=>!admins.includes(x));
+  if(!admins.includes(myEmail)) admins.unshift(myEmail);
+  try{await db.doc("config/members").set({admins,staff});$("#memNote").textContent="저장했어요. 관리자 "+admins.length+"명, 맞춤제안팀 "+staff.length+"명";toast("팀원을 저장했어요")}
+  catch(e){toast("저장하지 못했어요. 관리자 계정인지 확인해 주세요.")}
+};
+
+// ---------- 로그인 · 데이터 연결 ----------
+function gate(msg,showLogout){$("#gate").hidden=false;$("#app").hidden=true;if(msg)$("#gateMsg").innerHTML=msg;$("#btnLogin").hidden=!!showLogout;$("#btnLogout2").hidden=!showLogout}
+function stopAll(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[]}
+if(typeof firebaseConfig==="undefined"||!firebaseConfig.apiKey||/여기/.test(firebaseConfig.apiKey)){
+  gate("아직 연결 설정이 안 됐어요.<br><b>config.js</b> 파일에 파이어베이스 설정값을 붙여넣어 주세요.",false);$("#btnLogin").hidden=true;
+}else{
+  firebase.initializeApp(firebaseConfig);
+  const auth=firebase.auth(); db=firebase.firestore();
+  const provider=new firebase.auth.GoogleAuthProvider(); provider.setCustomParameters({prompt:"select_account"});
+  $("#btnLogin").onclick=async()=>{
+    try{await auth.signInWithPopup(provider)}
+    catch(e){
+      if(e&&["auth/popup-blocked","auth/operation-not-supported-in-this-environment","auth/cancelled-popup-request"].includes(e.code)){auth.signInWithRedirect(provider)}
+      else if(e&&e.code==="auth/unauthorized-domain"){toast("파이어베이스에 이 페이지 주소가 등록되지 않았어요 (승인된 도메인)")}
+      else if(!(e&&e.code==="auth/popup-closed-by-user")){toast("로그인하지 못했어요. 다시 시도해 주세요.")}
+    }
+  };
+  const out=()=>auth.signOut();
+  $("#btnLogout").onclick=out; $("#btnLogout2").onclick=out;
+  auth.getRedirectResult().catch(()=>{});
+  auth.onAuthStateChanged(u=>{
+    stopAll(); rows=[]; members=null; loaded=false; isAdmin=false; canWrite=false; setupNeeded=false; demo=false;
+    if(!u){gate("맞춤제안팀 전용입니다.<br>등록된 구글 계정으로 로그인하세요.",false);return}
+    myEmail=(u.email||"").toLowerCase(); myId=u.uid; $("#meMail").textContent=myEmail;
+    gate("확인하는 중이에요…",false); $("#btnLogin").hidden=true;
+    unsubs.push(db.doc("config/members").onSnapshot(snap=>{
+      if(snap.exists){members=snap.data()||{};isAdmin=(members.admins||[]).includes(myEmail);setupNeeded=false}
+      else{members=null;isAdmin=true;setupNeeded=true}
+      canWrite=true; $("#gate").hidden=true; $("#app").hidden=false;
+      if(!loaded) startData(); renderAll();
+    },e=>{
+      stopAll();
+      gate("<b>"+esc(myEmail)+"</b> 계정은 등록되어 있지 않아요.<br>그룹장님께 팀원 등록을 요청하세요.",true);
+    }));
+  });
+}
+function startData(){
+  loaded=true;
+  const timer=setTimeout(()=>{if(!rows.length&&!loadErr){/* 데이터가 없을 수도 있음 */}},10000);
+  unsubs.push(db.doc("config/main").onSnapshot(s=>{if(s.exists){const d=s.data();cfg={days:(d.days||cfg.days).slice(0,4),soon:d.soon||7,payDays:d.payDays||94};renderAll()}},()=>{}));
+  unsubs.push(db.collection("customers").onSnapshot(snap=>{
+    clearTimeout(timer);loadErr="";
+    rows=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    renderAll();
+  },e=>{clearTimeout(timer);loadErr="데이터를 불러오지 못했어요. 새로고침해 주세요.";renderAll()}));
+}
+})();
+</script>
+</body>
+</html>
