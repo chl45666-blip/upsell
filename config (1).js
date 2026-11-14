@@ -1,10 +1,9 @@
-// 이 파일 전체를 지우고, 파이어베이스에서 복사한
-// const firebaseConfig = { ... }; 부분만 붙여넣으세요.
 const firebaseConfig = {
-  apiKey: "여기에_붙여넣기",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyDfWiqKRFNa-O_2vEe_UKofoLg9xbeuz_k",
+  authDomain: "upsell-chungnam.firebaseapp.com",
+  projectId: "upsell-chungnam",
+  storageBucket: "upsell-chungnam.firebasestorage.app",
+  messagingSenderId: "940495156762",
+  appId: "1:940495156762:web:7431f2bcac9922aa8703a3",
+  measurementId: "G-TJD6DQFE2T"
 };
